@@ -17,8 +17,9 @@ public class main
 	{
 		GlobalAlignment ga = new GlobalAlignment();
 		ga.printSequence();
-		System.out.println(ga.getsequences()[0]);
-		System.out.println(ga.getsequences()[1]);
+		String[] a = ga.getSequences();
+		System.out.println(a[0]);
+		System.out.println(a[1]);
 	}
 
 }
