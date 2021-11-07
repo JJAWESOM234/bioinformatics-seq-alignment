@@ -42,12 +42,12 @@ Estimated Score: 5
 -ACCCAACGGCAG
 AAAGAAACCG-AT
 ```
-**Sample Input (1)**:
+**Sample Input (2)**:
 ```
 Enter the first DNA sequence: cgtgtaattcag
 Enter the second DNA sequence:  ccacactgtact
 ```
-**Expected Output (1)**: 
+**Expected Output (2)**: 
 ```
               C    C    A    C    A    C    T    G    T    A    C    T
          0   -1   -2   -3   -4   -5   -6   -7   -8   -9  -10  -11  -12
