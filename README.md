@@ -93,3 +93,4 @@ W. R. Pearson, “Selecting the Right Similarity-Scoring Matrix,” Curr Protoc 
 # TODO (Dev) 
 
 - Add affine gap penalties (favor longer gaps as opposed to many small gaps)
+- Add normalization function to score
