@@ -5,8 +5,8 @@ import java.util.Scanner;
 public class GlobalAlignment
 {
 	// Initilize gap penalties
-	private final double GAP_OPEN_PENALTY = -10.0;
-	private final double GAP_EXTEND_PENALTY = 0.5;
+	private final int GAP_OPEN_PENALTY = -10;
+	private final int GAP_EXTEND_PENALTY = -1;
 
 	// Initilize user input variables
 	private char[] sequence1Char;
@@ -15,7 +15,7 @@ public class GlobalAlignment
 	// Global Scanner for user input
 	Scanner scan;
 
-	// Matrices to track scoring of matches or mismatchs and the overall score of
+	// Matrices to track scoring of matches or mismatch and the overall score of
 	// each alignment
 	private int[][] scoringMatrix;
 	private int[][] sequenceMatrix;
@@ -59,18 +59,28 @@ public class GlobalAlignment
 	{
 		// Create a temp matrix that will be populated
 		int[][] seqMatrix = new int[this.sequence1Char.length + 1][this.sequence2Char.length + 1];
+		int[][] seqMatrixDeletionGap = new int[this.sequence1Char.length + 1][this.sequence2Char.length + 1];
+		int[][] seqMatrixInsertionGap = new int[this.sequence1Char.length + 1][this.sequence2Char.length + 1];
 
 		// Loop through the rows and set the cell value to gap penalty * rows index
-		for (int i = 0; i < seqMatrix.length; i++)
+		for (int i = 1; i < seqMatrix.length; i++)
 		{
-			seqMatrix[i][0] = i * (int) this.GAP_OPEN_PENALTY;
+			seqMatrix[i][0] = (this.GAP_OPEN_PENALTY + (i * this.GAP_EXTEND_PENALTY)); // a
+
+			seqMatrixDeletionGap[i][0] = ((this.GAP_OPEN_PENALTY + (this.GAP_EXTEND_PENALTY * i)));// c
+
+			seqMatrixInsertionGap[i][0] = Integer.MIN_VALUE; // b
 		}
 
-		// Loop through the columns and set the cell value to gap penalty * coulmns
+		// Loop through the columns and set the cell value to gap penalty * columns
 		// index
-		for (int i = 0; i < seqMatrix[0].length; i++)
+		for (int i = 1; i < seqMatrix[0].length; i++)
 		{
-			seqMatrix[0][i] = i * (int) this.GAP_OPEN_PENALTY;
+			seqMatrix[0][i] = (this.GAP_OPEN_PENALTY + (i * this.GAP_EXTEND_PENALTY));
+
+			seqMatrixDeletionGap[0][i] = Integer.MIN_VALUE;// c
+
+			seqMatrixInsertionGap[0][i] = ((this.GAP_OPEN_PENALTY + (this.GAP_EXTEND_PENALTY * i))); // b
 		}
 
 		// Loop through the entire matrix
@@ -84,9 +94,16 @@ public class GlobalAlignment
 				int match = seqMatrix[i - 1][j - 1]
 						+ this.getValues(this.sequence1Char[i - 1], this.sequence2Char[j - 1]);
 
+				seqMatrixDeletionGap[i][j] = Math.max(seqMatrixDeletionGap[i - 1][j] - this.GAP_EXTEND_PENALTY,
+						seqMatrix[i - 1][j] + (this.GAP_OPEN_PENALTY + this.GAP_EXTEND_PENALTY));
+				seqMatrixInsertionGap[i][j] = Math.max(seqMatrixInsertionGap[i][j - 1] - this.GAP_EXTEND_PENALTY,
+						seqMatrix[i][j - 1] + (this.GAP_OPEN_PENALTY + this.GAP_EXTEND_PENALTY));
+
 				// Left or Top represents the deletion of a residue and insertion of a gap
-				int delete = seqMatrix[i - 1][j] + (int) this.GAP_OPEN_PENALTY;
-				int insert = seqMatrix[i][j - 1] + (int) this.GAP_OPEN_PENALTY;
+				int delete = seqMatrixDeletionGap[i][j];
+				int insert = seqMatrixInsertionGap[i][j];
+
+				System.out.printf("match: %d, delete: %d, insert: %d\n", match, delete, insert);
 
 				// Set the current cells value to the maximum of the three computed scores
 				seqMatrix[i][j] = this.max(match, delete, insert);
@@ -142,7 +159,7 @@ public class GlobalAlignment
 			for (int k = 0; k < j; k++)
 			{
 				returnSeq1 = "-" + returnSeq1;
-				returnSeq2 = this.sequence2Char[j - k] + returnSeq2;
+				returnSeq2 = this.sequence2Char[j - k - 1] + returnSeq2;
 			}
 		}
 		else
@@ -160,7 +177,7 @@ public class GlobalAlignment
 
 	protected int getValues(char a, char b)
 	{
-		// String to show the possible nucleotides (will add 'U')
+		// String to show the possible nucleotides
 		String nucleotideSeq = "ATGCU";
 
 		// Getting the index which corresponds with the row/column of the scoring matrix
@@ -174,7 +191,7 @@ public class GlobalAlignment
 		// Loops through the users first sequence to restrict users input
 		for (int i = 0; i < this.sequence1Char.length; i++)
 		{
-			// Normalizing the capatalization
+			// Normalizing the capitalization
 			char tempChar = Character.toUpperCase(this.sequence1Char[i]);
 
 			// Check to see if the character is in the valid list
@@ -193,7 +210,7 @@ public class GlobalAlignment
 		// Loops through the users first sequence to restrict users input
 		for (int i = 0; i < this.sequence2Char.length; i++)
 		{
-			// Normalizing the capatalization
+			// Normalizing the capitalization
 			char tempChar = Character.toUpperCase(this.sequence2Char[i]);
 
 			// Check to see if the character is in the valid list
