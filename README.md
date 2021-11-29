@@ -80,10 +80,9 @@ AAACCTGATGGAACCTGG
 
 ## File System Overview
 GlobalSequenceAlignment - Eclipse project folder (contains source code)  
-&nbsp;src/com/globalsequencealignment  
+&nbsp;/src/  
 &nbsp;&nbsp;GlobalAlignment.java - Source code of the Needleman-Wunsch algorithm  
 &nbsp;&nbsp;main.java - Driver control method  
-&nbsp;&nbsp;package-info.java - Eclipse package designation  
 LICENSE - GPL-3.0 License  
 README.md - This README for repo description  
 
