@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.globalsequencealignment;
+
 
 /**
  * @author Jed

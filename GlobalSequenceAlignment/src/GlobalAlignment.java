@@ -1,5 +1,3 @@
-package com.globalsequencealignment;
-
 import java.util.Scanner;
 
 public class GlobalAlignment
