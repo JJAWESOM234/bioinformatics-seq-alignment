@@ -20,6 +20,10 @@ public class GlobalAlignment
 	private int[][] scoringMatrix;
 	private int[][] sequenceMatrix;
 
+	// Matrices to track the gap penalties on the x and y axis.
+	int[][] horizontalGapMatrix;
+	int[][] verticalGapMatrix;
+
 	// Public constructor
 	public GlobalAlignment()
 	{
@@ -32,7 +36,7 @@ public class GlobalAlignment
 		this.setScoringMatrix();
 
 		// Store the alignment matrix in the global variable for analyzation
-		this.sequenceMatrix = this.fillSequenceMatrix();
+		this.fillSequenceMatrix();
 	}
 
 	protected void getUserSequences()
@@ -55,67 +59,93 @@ public class GlobalAlignment
 		this.validateSequence2();
 	}
 
-	protected int[][] fillSequenceMatrix()
+	private void fillInitialSequenceMatrix()
 	{
-		// Create a temp matrix that will be populated
-		int[][] seqMatrix = new int[this.sequence1Char.length + 1][this.sequence2Char.length + 1];
-		int[][] seqMatrixDeletionGap = new int[this.sequence1Char.length + 1][this.sequence2Char.length + 1];
-		int[][] seqMatrixInsertionGap = new int[this.sequence1Char.length + 1][this.sequence2Char.length + 1];
+		// Initialize global matrices to proper length and height
+		this.sequenceMatrix = new int[this.sequence1Char.length + 1][this.sequence2Char.length + 1];
+		this.horizontalGapMatrix = new int[this.sequence1Char.length + 1][this.sequence2Char.length + 1];
+		this.verticalGapMatrix = new int[this.sequence1Char.length + 1][this.sequence2Char.length + 1];
 
-		// Loop through the rows and set the cell value to gap penalty * rows index
-		for (int i = 1; i < seqMatrix.length; i++)
+		// Loop through matrices to initialize the first column of each matrix
+		for (int i = 1; i < this.sequenceMatrix.length; i++)
 		{
-			seqMatrix[i][0] = (this.GAP_OPEN_PENALTY + (i * this.GAP_EXTEND_PENALTY)); // a
+			// Main scoring matrix for match/mismatch, gap penalties always applied per i
+			this.sequenceMatrix[i][0] = (this.GAP_OPEN_PENALTY + (i * this.GAP_EXTEND_PENALTY));
 
-			seqMatrixDeletionGap[i][0] = ((this.GAP_OPEN_PENALTY + (this.GAP_EXTEND_PENALTY * i)));// c
+			// Stores the score for adding a horizontal gap to the alignment
+			this.horizontalGapMatrix[i][0] = ((this.GAP_OPEN_PENALTY + (this.GAP_EXTEND_PENALTY * i)));
 
-			seqMatrixInsertionGap[i][0] = Integer.MIN_VALUE; // b
+			// Initializes the entire first column to "negative infinity"
+			this.verticalGapMatrix[i][0] = Integer.MIN_VALUE;
+
 		}
 
-		// Loop through the columns and set the cell value to gap penalty * columns
-		// index
-		for (int i = 1; i < seqMatrix[0].length; i++)
+		// Loop through matrices to initialize the first row of each matrix
+		for (int i = 1; i < this.sequenceMatrix[0].length; i++)
 		{
-			seqMatrix[0][i] = (this.GAP_OPEN_PENALTY + (i * this.GAP_EXTEND_PENALTY));
+			// Main scoring matrix for match/mismatch, gap penalties always applied per i
+			this.sequenceMatrix[0][i] = (this.GAP_OPEN_PENALTY + (i * this.GAP_EXTEND_PENALTY));
 
-			seqMatrixDeletionGap[0][i] = Integer.MIN_VALUE;// c
+			// Initializes the entire first row to "negative infinity"
+			this.horizontalGapMatrix[0][i] = Integer.MIN_VALUE;
 
-			seqMatrixInsertionGap[0][i] = ((this.GAP_OPEN_PENALTY + (this.GAP_EXTEND_PENALTY * i))); // b
+			// Stores the score for adding a vertical gap to the alignment
+			this.verticalGapMatrix[0][i] = ((this.GAP_OPEN_PENALTY + (this.GAP_EXTEND_PENALTY * i)));
 		}
 
-		// Loop through the entire matrix
-		for (int i = 1; i < seqMatrix.length; i++)
+	}
+
+	protected void fillSequenceMatrix()
+	{
+		this.fillInitialSequenceMatrix();
+
+		// Loop through the entire matrix, storing the individual char to a temporary
+		// variable.
+		for (int i = 1; i < this.sequenceMatrix.length; i++)
 		{
-			for (int j = 1; j < seqMatrix[0].length; j++)
+			var aChar = this.sequence1Char[i - 1];
+			for (int j = 1; j < this.sequenceMatrix[0].length; j++)
 			{
-				// Gets the scoring values for top-left, left, and top cells
-
-				// Diagonal represent match or mismatch
-				int match = seqMatrix[i - 1][j - 1]
-						+ this.getValues(this.sequence1Char[i - 1], this.sequence2Char[j - 1]);
-
-				seqMatrixDeletionGap[i][j] = Math.max(seqMatrixDeletionGap[i - 1][j] - this.GAP_EXTEND_PENALTY,
-						seqMatrix[i - 1][j] + (this.GAP_OPEN_PENALTY + this.GAP_EXTEND_PENALTY));
-				seqMatrixInsertionGap[i][j] = Math.max(seqMatrixInsertionGap[i][j - 1] - this.GAP_EXTEND_PENALTY,
-						seqMatrix[i][j - 1] + (this.GAP_OPEN_PENALTY + this.GAP_EXTEND_PENALTY));
-
-				// Left or Top represents the deletion of a residue and insertion of a gap
-				int delete = seqMatrixDeletionGap[i][j];
-				int insert = seqMatrixInsertionGap[i][j];
-
-				System.out.printf("match: %d, delete: %d, insert: %d\n", match, delete, insert);
-
+				var bChar = this.sequence2Char[j - 1];
 				// Set the current cells value to the maximum of the three computed scores
-				seqMatrix[i][j] = this.max(match, delete, insert);
+				this.sequenceMatrix[i][j] = this.affineRecursion(aChar, bChar, i, j);
 			}
 		}
 
-		return seqMatrix;
+	}
+
+	private int affineRecursion(char aChar, char bChar, int i, int j)
+	{
+		// Match or mismatch value based on char
+		int matchValue = this.getValues(aChar, bChar);
+
+		// Find the maximum score for horizontal gaps
+		this.horizontalGapMatrix[i][j] = this.hortMax(i, j, bChar);
+		// Find the maximum score for vertical gaps
+		this.verticalGapMatrix[i][j] = this.vertMax(i, j, aChar);
+
+		// Returns the maximum value from direct match/mismatch, insertion, or deletion.
+		return this.max(this.horizontalGapMatrix[i][j], this.sequenceMatrix[i - 1][j - 1] + matchValue,
+				this.verticalGapMatrix[i][j]);
+	}
+
+	private int vertMax(int i, int j, char aChar)
+	{
+		// Maximum score from adding a gap or having a direct match/mismatch
+		return Math.max(this.verticalGapMatrix[i - 1][j] + this.GAP_EXTEND_PENALTY,
+				this.sequenceMatrix[i - 1][j] + (this.GAP_OPEN_PENALTY + this.GAP_EXTEND_PENALTY));
+	}
+
+	private int hortMax(int i, int j, char bChar)
+	{
+		// Maximum score from adding a gap or having a direct match/mismatch
+		return Math.max(this.horizontalGapMatrix[i][j - 1] + this.GAP_EXTEND_PENALTY,
+				this.sequenceMatrix[i][j - 1] + (this.GAP_OPEN_PENALTY + this.GAP_EXTEND_PENALTY));
 	}
 
 	protected String[] getSequences()
 	{
-		// Initilize return sequences and index variables
+		// Initialize return sequences and index variables
 		String returnSeq1 = "";
 		String returnSeq2 = "";
 		int i = this.sequenceMatrix.length - 1;
@@ -152,7 +182,7 @@ public class GlobalAlignment
 			}
 		}
 
-		// If one of the sequences is out of resiude before the other this fills in the
+		// If one of the sequences is out of residue before the other this fills in the
 		// rest of the sequence with gaps
 		if (i == 0)
 		{
@@ -228,6 +258,7 @@ public class GlobalAlignment
 	{
 		// This is the scoring matrix used for the program
 		// ATGCU
+
 		int[][] tempMatrix =
 		{
 				{ 5, -4, -4, -4, -4 },
@@ -285,4 +316,5 @@ public class GlobalAlignment
 		// Find the maximum and return it
 		return Math.max(n1, Math.max(n2, n3));
 	}
+
 }
